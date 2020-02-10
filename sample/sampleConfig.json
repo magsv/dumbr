@@ -1,0 +1,14 @@
+{
+    "requestConfig": [
+        {
+            "responseTemplateName": "helloWorld.template",
+            "resource": "/resources/hello",
+            "method": "GET"
+        },
+        {
+            "responseTemplateName": "helloWorldPost.template",
+            "resource": "/resources/hellopost",
+            "method": "POST"
+        }
+    ]
+}

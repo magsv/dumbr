@@ -1,0 +1,22 @@
+<html>
+  <body>
+    <h1>Hello world get</h1>
+    <table>
+      {{range .Cookies}}
+      <tr>
+          <td>Cookie {{.Name}}</td>
+          <td>Value {{.Value}}</td>
+      </tr>
+      {{end}}
+    </table>
+     <table>
+     
+      {{range $key,$value := .Header}}
+      <tr>
+          <td>Header {{$key}}</td>
+          <td>Value {{$value}}</td>
+      </tr>
+      {{end}}
+    </table>
+  </body>
+</html>
