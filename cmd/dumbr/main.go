@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -51,6 +50,22 @@ func (RCnfg *RequestConfig) HandlePost(response http.ResponseWriter, r *http.Req
 	uuid := getGuuid()
 	logRequest(r, "POST CALLED", uuid)
 	dumpRequest(r, RCnfg, "POST", uuid)
+	respondWithTemplate(response, RCnfg.ResponseTemplate, r)
+
+}
+
+func (RCnfg *RequestConfig) HandlePut(response http.ResponseWriter, r *http.Request) {
+	uuid := getGuuid()
+	logRequest(r, "PUT CALLED", uuid)
+	dumpRequest(r, RCnfg, "PUT", uuid)
+	respondWithTemplate(response, RCnfg.ResponseTemplate, r)
+
+}
+
+func (RCnfg *RequestConfig) HandleDelete(response http.ResponseWriter, r *http.Request) {
+	uuid := getGuuid()
+	logRequest(r, "DELETE CALLED", uuid)
+	dumpRequest(r, RCnfg, "DELETE", uuid)
 	respondWithTemplate(response, RCnfg.ResponseTemplate, r)
 
 }
@@ -185,6 +200,10 @@ func startServer(port string, templatePath,
 			router.HandlerFunc("GET", requestCnfg.RequestConfigurations[i].Resource, requestCnfg.RequestConfigurations[i].HandleGet)
 		} else if strings.ToLower(requestCnfg.RequestConfigurations[i].Method) == "post" {
 			router.HandlerFunc("POST", requestCnfg.RequestConfigurations[i].Resource, requestCnfg.RequestConfigurations[i].HandlePost)
+		} else if strings.ToLower(requestCnfg.RequestConfigurations[i].Method) == "put" {
+			router.HandlerFunc("PUT", requestCnfg.RequestConfigurations[i].Resource, requestCnfg.RequestConfigurations[i].HandlePut)
+		} else if strings.ToLower(requestCnfg.RequestConfigurations[i].Method) == "delete" {
+			router.HandlerFunc("DELETE", requestCnfg.RequestConfigurations[i].Resource, requestCnfg.RequestConfigurations[i].HandleDelete)
 		}
 
 	}

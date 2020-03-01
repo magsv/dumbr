@@ -35,7 +35,7 @@ To which resources the server should be listening to can be configured through a
 
 * responseTemplateName : name of the golang text template to execute when hitting the configured resource
 * resource : the resource url that should be valid for executing the template
-* method : currently only POST or GET
+* method : currently PUT, DELETE, POST or GET
 
 The templating language is the standard as delivere together with Go. Templates will recieve the incoming *http.Request object meaning that data can be fetched directly from this in the template during execution.
 
