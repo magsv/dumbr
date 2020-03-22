@@ -6,20 +6,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/julienschmidt/httprouter"
-	uuid "github.com/satori/go.uuid"
 	"go.uber.org/zap"
-)
-
-var (
-	Version string
-	Build   string
 )
 
 var responseTemplates *template.Template
@@ -34,38 +27,26 @@ type RequestConfig struct {
 	Method           string `json:"method"`   //the http method to respond to GET or POST
 }
 
-func getGuuid() string {
-	id := uuid.NewV4()
-	return id.String()
-}
+func logRequest(r *http.Request) {
+	zap.S().Infof("request,remoteAddr:%s, refered:%s,userAgent:%s,requestURI:%s", r.Method,
+		r.RemoteAddr, r.Referer(), r.UserAgent(), r.RequestURI)
 
-func logHTTPDump(data []byte) {
-	zap.S().Debugf("REQUEST:%s", string(data))
-}
-func logRequest(r *http.Request, message string, uuid string) {
-	zap.S().Infof("REQUEST,remoteAdd:%s, refered:%s,userAgent:%s,uuid:%s,requestURI:%s", r.RemoteAddr, r.Referer(), r.UserAgent(), uuid, r.RequestURI)
 }
 
 func (RCnfg *RequestConfig) HandlePost(response http.ResponseWriter, r *http.Request) {
-	uuid := getGuuid()
-	logRequest(r, "POST CALLED", uuid)
-	dumpRequest(r, RCnfg, "POST", uuid)
+	logRequest(r)
 	respondWithTemplate(response, RCnfg.ResponseTemplate, r)
 
 }
 
 func (RCnfg *RequestConfig) HandlePut(response http.ResponseWriter, r *http.Request) {
-	uuid := getGuuid()
-	logRequest(r, "PUT CALLED", uuid)
-	dumpRequest(r, RCnfg, "PUT", uuid)
+	logRequest(r)
 	respondWithTemplate(response, RCnfg.ResponseTemplate, r)
 
 }
 
 func (RCnfg *RequestConfig) HandleDelete(response http.ResponseWriter, r *http.Request) {
-	uuid := getGuuid()
-	logRequest(r, "DELETE CALLED", uuid)
-	dumpRequest(r, RCnfg, "DELETE", uuid)
+	logRequest(r)
 	respondWithTemplate(response, RCnfg.ResponseTemplate, r)
 
 }
@@ -73,29 +54,16 @@ func (RCnfg *RequestConfig) HandleDelete(response http.ResponseWriter, r *http.R
 func respondWithTemplate(w http.ResponseWriter, templateName string, r *http.Request) {
 	var err error
 	if err = responseTemplates.ExecuteTemplate(w, templateName, r); err != nil {
-		zap.S().Errorf("Failed in execution of template with name:%s, error:%s", templateName, err.Error())
+		zap.S().Errorf("Failed in execution of template with name:%s, error:%s", templateName,
+			err.Error())
 		http.Error(w, "500 Internal Server Error", 500)
 		return
 	}
 }
 
-func dumpRequest(r *http.Request, RCnfg *RequestConfig, mode string, uuid string) {
-	var rDump []byte
-	var err error
-	if rDump, err = httputil.DumpRequest(r, true); err != nil {
-		zap.S().Errorf("Failed in dump request:%s", err.Error())
-		return
-	}
-	logHTTPDump(rDump)
-
-}
-
 func (RCnfg *RequestConfig) HandleGet(w http.ResponseWriter, r *http.Request) {
-
 	var err error
-	uuid := getGuuid()
-	logRequest(r, "GET Called - query", uuid)
-	dumpRequest(r, RCnfg, "GET", uuid)
+	logRequest(r)
 	if err = responseTemplates.ExecuteTemplate(w, RCnfg.ResponseTemplate, r); err != nil {
 		zap.S().Errorf("Failed in handle get:%s", err.Error())
 		http.Error(w, "500 Internal Server Error", 500)
@@ -114,14 +82,11 @@ func parseTemplates(templateFolder string, templateExtension string) (*template.
 			}
 			zap.S().Infof("Parsed template from templateFolder:%s, template:%s", templateFolder, path)
 		}
-
 		return err
 	})
-
 	if err != nil {
 		return templ, err
 	}
-
 	return templ, nil
 }
 
@@ -150,7 +115,6 @@ func startServer(port string, templatePath,
 	var err error
 	var cfg zap.Config
 	var requestCnfg Configuration
-
 	//configure the logging
 	if logConfig == "" {
 		cfg = zap.Config{
@@ -171,17 +135,14 @@ func startServer(port string, templatePath,
 				panic(err)
 			}
 		}
-
 	}
 
 	logger, err := cfg.Build()
 	if err != nil {
 		panic(err)
 	}
-
 	zap.ReplaceGlobals(logger)
 	zap.S().Infof("Starting server listening on port:%s", port)
-
 	//parse all of the templates
 	if responseTemplates, err = parseTemplates(templatePath, ".template"); err != nil {
 		zap.S().Errorf("Failed in reading templates, error:%s", err.Error())
@@ -194,16 +155,22 @@ func startServer(port string, templatePath,
 	}
 	router := httprouter.New()
 	for i := 0; i < len(requestCnfg.RequestConfigurations); i++ {
-		zap.S().Infof("Adding request handler for resource:%s, method:%s, templatateName:%s", requestCnfg.RequestConfigurations[i].Resource,
-			requestCnfg.RequestConfigurations[i].Method, requestCnfg.RequestConfigurations[i].ResponseTemplate)
+		zap.S().Infof("Adding request handler for resource:%s, method:%s, templatateName:%s",
+			requestCnfg.RequestConfigurations[i].Resource,
+			requestCnfg.RequestConfigurations[i].Method,
+			requestCnfg.RequestConfigurations[i].ResponseTemplate)
 		if strings.ToLower(requestCnfg.RequestConfigurations[i].Method) == "get" {
-			router.HandlerFunc("GET", requestCnfg.RequestConfigurations[i].Resource, requestCnfg.RequestConfigurations[i].HandleGet)
+			router.HandlerFunc("GET", requestCnfg.RequestConfigurations[i].Resource,
+				requestCnfg.RequestConfigurations[i].HandleGet)
 		} else if strings.ToLower(requestCnfg.RequestConfigurations[i].Method) == "post" {
-			router.HandlerFunc("POST", requestCnfg.RequestConfigurations[i].Resource, requestCnfg.RequestConfigurations[i].HandlePost)
+			router.HandlerFunc("POST", requestCnfg.RequestConfigurations[i].Resource,
+				requestCnfg.RequestConfigurations[i].HandlePost)
 		} else if strings.ToLower(requestCnfg.RequestConfigurations[i].Method) == "put" {
-			router.HandlerFunc("PUT", requestCnfg.RequestConfigurations[i].Resource, requestCnfg.RequestConfigurations[i].HandlePut)
+			router.HandlerFunc("PUT", requestCnfg.RequestConfigurations[i].Resource,
+				requestCnfg.RequestConfigurations[i].HandlePut)
 		} else if strings.ToLower(requestCnfg.RequestConfigurations[i].Method) == "delete" {
-			router.HandlerFunc("DELETE", requestCnfg.RequestConfigurations[i].Resource, requestCnfg.RequestConfigurations[i].HandleDelete)
+			router.HandlerFunc("DELETE", requestCnfg.RequestConfigurations[i].Resource,
+				requestCnfg.RequestConfigurations[i].HandleDelete)
 		}
 
 	}
@@ -218,7 +185,6 @@ func startServer(port string, templatePath,
 }
 
 func main() {
-	showVersion := flag.Bool("version", false, "If specified will print out the version information and then exit")
 	templatePath := flag.String("templates", "./templates", "Specifies the path to the templates folder")
 	port := flag.String("port", "", "Specifies the port to listen on")
 	serverKey := flag.String("serverKey", "", "Specifies the server ssl key")
@@ -226,11 +192,6 @@ func main() {
 	configuration := flag.String("configuration", "", "Path to json file containing configuration for service")
 	logConfig := flag.String("logconfig", "", "The path to the zap logger configuration file")
 	flag.Parse()
-	if *showVersion {
-		fmt.Println("Version:", Version)
-		fmt.Println("Build time:", Build)
-		return
-	}
 	if *templatePath != "" && *port != "" && *configuration != "" {
 		startServer(*port, *templatePath, *serverKey, *serverCrt, *configuration, *logConfig)
 	} else {
